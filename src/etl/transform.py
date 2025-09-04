@@ -1,5 +1,5 @@
 """
-Datatransformation module for creating dimensional model
+Data transformation module for creating dimensional model
 """
 
 import polars as pl
