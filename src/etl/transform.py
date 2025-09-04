@@ -56,7 +56,7 @@ class DataTransformer:
         
         # Transform the DataFrame
         dim_customers = (df_clean.select(
-                                    pl.col("id").alias("customer_id"),
+                                    pl.col("id").alias("customer__id"),
                                     pl.col("company").alias("company_name"),
                                     pl.col("first_name"),
                                     pl.col("last_name"),
