@@ -1,0 +1,91 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+pip-wheel-metadata/
+share/python-wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+MANIFEST
+
+# Virtual Environment
+venv/
+env/
+ENV/
+env.bak/
+venv.bak/
+.venv/
+
+# Environment Variables
+.env
+.env.local
+.env.production
+.env.test
+
+# Database Files
+database/*.db
+database/*.duckdb
+*.sqlite
+*.sqlite3
+
+# Log Files
+logs/
+*.log
+etl_pipeline.log
+
+# Data Files
+data/raw/*.csv
+data/processed/*
+!data/raw/CSV_FILES_INFO.txt
+!data/raw/.gitkeep
+!data/processed/.gitkeep
+
+# IDE and Editor Files
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS Generated Files
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+
+# Jupyter Notebooks
+.ipynb_checkpoints/
+*.ipynb
+
+
+# Streamlit
+.streamlit/
+.streamlit/secrets.toml
+
+# Temporary Files
+*.tmp
+*.temp
+temp/
+tmp/
+
+# Cache directories
+.cache/
+__pycache__/
