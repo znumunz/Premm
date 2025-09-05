@@ -66,6 +66,7 @@ class config:
         "products":"products.csv",
         "stores":"stores.csv",
         "transactions":"transactions.csv",
+        "exchange_rates":"exchange_rates.csv",
     }
     # @classmethod
     # def ensure_directories(cls):

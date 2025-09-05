@@ -322,7 +322,7 @@ class DataTransformer:
 
 
   
-   def transform_transactions_fact(self, transactions_df: pl.DataFrame) -> pl.DataFrame:
+   def transform_transactions_fact(self, transactions_df: pl.DataFrame ,exchange_rates: pl.DataFrame) -> pl.DataFrame:
        """Transform orders and order details into sales fact table
        1. Clean the data by standardizing column names
        2. Join orders with order details
@@ -331,8 +331,46 @@ class DataTransformer:
        """
        logger.info("Transforming sales fact table")
 
-
        df_clean = self.standardize_column_names(transactions_df)
+       transactions_fact = (
+        df_clean
+        .select([
+            pl.col("invoice_id"),
+            pl.col("line").alias("line_item"),
+            pl.col("customer_id"),
+            pl.col("product_id"),
+            pl.col("quantity"),
+            pl.col("date"),
+            pl.col("discount"),
+            pl.col("line_total"),
+            pl.col("store_id"),
+            pl.col("employee_id"),
+            pl.col("currency"),
+            pl.col("sku").alias("stock_keeping_unit"),
+            pl.col("transaction_type"),
+            pl.col("payment_method"),
+            pl.col("unit_price"),
+            pl.lit(datetime.now()).alias("created_at"),
+            pl.lit(datetime.now()).alias("updated_at"),
+        ]).with_columns(pl.col("date").dt.strftime("%d%m%Y").alias("date_key"))
+        .join(exchange_rates, on="currency", how="left")
+        # สร้าง unit_price_usd ก่อน
+        .with_columns(
+            (pl.col("unit_price") * pl.col("rate_to_usd")).alias("unit_price_usd"))
+        # คำนวณ gross/net/discount ใช้สูตรเดิมโดยตรง ไม่เรียก unit_price_usd ที่สร้าง
+        .with_columns([
+            (pl.col("quantity") * (pl.col("unit_price_usd") * pl.col("rate_to_usd"))).alias("total_revenue_usd"),
+            (pl.col("quantity") * (pl.col("unit_price_usd") * pl.col("rate_to_usd")) * (1 - pl.col("discount") / 100)).alias("net_amount_usd"),
+            (pl.col("quantity") * (pl.col("unit_price_usd") * pl.col("rate_to_usd")) * (pl.col("discount") / 100)).alias("discount_usd"),
+            ])
+        .sort("date_key")
+    )
+
+
+            
+
+       return transactions_fact
+
     #    # Clean the data
     #    df_orders = self.standardize_column_names(orders_df)
     #    df_order_details = self.standardize_column_names(order_details_df)
@@ -345,32 +383,36 @@ class DataTransformer:
     #    right_on="order_id",
     #    how="inner"
     #    )
-       transactions_fact = df_clean.select([
-                        pl.col("invoice_id"),
-                        pl.col("line").alias("line_item"),
-                        pl.col("customer_id"),
-                        pl.col("product_id"),
-                        pl.col("unit_price").alias("unit_price"),
-                        pl.col("quantity"),
-                        (pl.col("quantity") * pl.col("unit_price")).alias("gross_amount"),
-                        (pl.col("quantity") * pl.col("unit_price") * (1 - pl.col("discount") / 100)).alias("net_amount"),
-                        pl.col("date"),
-                        pl.col("discount"),
-                        pl.col("line_total"),
-                        pl.col("store_id"),
-                        pl.col("employee_id"),
-                        pl.col("currency"),
-                        pl.col("currency_symbol"),
-                        pl.col("sku").alias("stock_keeping_unit"),
-                        pl.col("transaction_type"),
-                        pl.col("payment_method"),
-                        pl.lit(datetime.now()).alias("created_at"),
-                        pl.lit(datetime.now()).alias("updated_at")]
-                        ).with_columns(pl.col("date").dt.strftime("%d%m%Y").alias("date_key")
-                        ).sort(by='date_key')
+    #    transactions_fact = df_clean.select([
+    #                     pl.col("invoice_id"),
+    #                     pl.col("line").alias("line_item"),
+    #                     pl.col("customer_id"),
+    #                     pl.col("product_id"),
+    #                     pl.col("unit_price").alias("unit_price"),
+    #                     pl.col("quantity"),
+    #                     (pl.col("quantity") * pl.col("unit_price")).alias("gross_amount"),
+    #                     (pl.col("quantity") * pl.col("unit_price") * (1 - pl.col("discount") / 100)).alias("net_amount"),
+    #                     pl.col("date"),
+    #                     pl.col("discount"),
+    #                     pl.col("line_total"),
+    #                     pl.col("store_id"),
+    #                     pl.col("employee_id"),
+    #                     pl.col("currency"),
+    #                     pl.col("currency_symbol"),
+    #                     pl.col("sku").alias("stock_keeping_unit"),
+    #                     pl.col("transaction_type"),
+    #                     pl.col("payment_method"),
+    #                     pl.lit(datetime.now()).alias("created_at"),
+    #                     pl.lit(datetime.now()).alias("updated_at")]
+    #                     ).with_columns(pl.col("date").dt.strftime("%d%m%Y").alias("date_key").join(
+    #                                         exchange_rates, on="currency", how="left").with_columns([
+    #                         (pl.col("unit_price") * pl.col("rate_to_usd")).alias("unit_price_usd"),
+    #                         (pl.col("gross_amount") * pl.col("rate_to_usd")).alias("gross_amount_usd"),
+    #                         (pl.col("net_amount") * pl.col("rate_to_usd")).alias("net_amount_usd"),
+    #                                                                                                 ])
+    #                     ).sort(by='date_key')
                         
-       return transactions_fact
-      
+    #    return transactions_fact
    def transform_all_data(self, raw_data: Dict[str, pl.DataFrame]) -> Dict[str, pl.DataFrame]:
        """
        Transform all raw data into dimensional model
@@ -414,8 +456,12 @@ class DataTransformer:
 
 
        # Create fact tables
-       if "transactions" in raw_data:
-           transformed["transactions_fact"] = self.transform_transactions_fact(raw_data["transactions"])
+       if "transactions" in raw_data and 'exchange_rates' in raw_data:
+           transformed["fact_transactions"] = self.transform_transactions_fact(
+               raw_data["transactions"],
+               raw_data['exchange_rates'])
+              
+
 
 
        logger.info(f"Transformation complete. Created {len(transformed)} tables")

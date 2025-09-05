@@ -28,6 +28,8 @@ class DataLoader:
             # Ensure database directory exists
             df_path = Path(self.db_path)
             if not df_path.parent.exists():
+                
+                self.db_path = Path(self.db_path)
                 self.db_path.parent.mkdir(parents=True, exist_ok=True)
             
             
